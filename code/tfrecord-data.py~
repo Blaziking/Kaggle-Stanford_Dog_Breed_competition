@@ -1,0 +1,56 @@
+import tensorflow as tf
+import numpy as np
+import dataset
+import os.path
+
+home_dir = '/home/shubham/Desktop/projects/dog-breed-competition/'
+train_dir = home_dir + 'data/train/'
+test_dir = home_dir + 'data/test/'
+labels_dir = home_dir + 'data/labels.csv'
+
+def load_data(divider=9000):
+    '''Arguments:
+            divider -- point to divide training and validation dataset
+   Returns:
+
+
+    '''
+    # Reads an image from a file, decodes it into a dense tensor, and resizes it
+    # to a fixed shape.
+
+    def parse_function(filename, label):
+        image_string = tf.read_file(filename)
+        image_decoded = tf.image.decode_image(image_string)
+        image_resized = tf.image.resize_image_with_crop_or_pad(image_decoded, 256, 256)
+        return image_resized, label
+
+    
+    labels,files = dataset.label_loader(labels_dir)
+
+    files = [train_dir + x for x in files] #adding home dir on each file name
+
+    training_dataset = tf.constant(files[:divider])
+    training_labels = tf.constant(labels[:divider])
+    assert(training_dataset.get_shape() == training_labels.get_shape())
+
+    training_dataset = tf.data.Dataset.from_tensor_slices((training_dataset,training_labels))
+    training_dataset = training_dataset.map(parse_function)
+
+
+
+    
+    validation_dataset = tf.constant(files[divider:])
+    validation_labels = tf.constant(labels[divider:])
+    assert(validation_dataset.get_shape() == validation_labels.get_shape())
+
+    validation_dataset = tf.data.Dataset.from_tensor_slices((validation_dataset,validation_labels))
+    validation_dataset = validation_dataset.map(parse_function)
+
+    dataset = {'traing_dataset':
+    return
+
+
+##testing
+
+load_data()
+print('works')

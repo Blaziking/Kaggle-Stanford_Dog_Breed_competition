@@ -1,0 +1,74 @@
+import tensorflow as tf
+import numpy as np
+from sklearn.preprocessing import LabelEncoder
+
+depth = 120
+batchsize = 10,000
+num_features =123333
+n_h =6
+
+def create_placeholders(num_features,depth):
+    X = tf.placeholder(name='X',shape=(num_features,None), dtype=tf.float32)
+    Y = tf.placeholder(name='Y',shape=(depth,None),dtype=tf.float32)
+    return X,Y
+
+
+def one_hot_encode(lables):
+    encoder = LabelEncoder() #to be later used for one_hot_encoding.
+    encoder = encoder.fit(np.squeeze(labels))
+    labels = encoder.transform(np.squeeze(labels)) #labels converted into numbers
+    labels = tf.one_hot(labels,depth= depth) #labels represented via one_hot representation
+
+    assert(labels.get_shape() == (batch_size,depth))
+    return labels
+
+    
+def initialize_variables():
+    #weights initalization
+    W1 = tf.get_variable(name='W1',shape=(n_h, num_features),initializer=tf.contrib.layers.xavier_initializer())
+    W2 = tf.get_variable(name='W2',shape=(depth,n_h),initializer=tf.contrib.layers.xavier_initializer())
+
+    #biases initalization
+    b1 = tf.get_variable(name='b1',shape=[n_h,1],initializer=tf.zeros_initializer())
+    b2= tf.get_variable(name='b2',shape=[depth,1],initializer=tf.zeros_initializer()) 
+    parameters = {'b1':b1,'b2':b2,'W1':W1, 'W2':W2}
+    return parameters
+
+
+
+
+
+def forward_prop(X,parameters):
+
+    '''Arguments:
+               X of shape 
+               parameters-- dictionary of parameters
+
+
+      Returns:
+      logits-- without calculating actiavation function on the last layer as the cost function doesn't need it. 
+    '''
+    Z1 = activation(X,parameters['W1'],parameters['b1'])
+    assert(Z1.get_shape() == (n_h,batch_size))
+    A1 = tf.nn.relu(Z1)
+    
+    logits = activation(A1,parameters['W2'],parameters['b2'])
+    
+    
+    assert(logits.get_shape()==(depth,batch_size))
+
+    return logits
+
+
+def compute_cost(Z,Y):
+    logits = tf.transpose(Z)
+    labels = tf.transpose(Y)
+    assert(logits.get_shape() == (batch_size,depth))
+    assert(labels.get_shape() == (batch_size,depth))
+
+    
+    cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=logits,labels = labels))
+    return loss
+
+with tf.Session() as sess:
+    

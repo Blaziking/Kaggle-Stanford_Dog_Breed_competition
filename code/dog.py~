@@ -1,0 +1,131 @@
+import tensorflow as tf
+import numpy as np
+import dataset
+from sklearn.preprocessing import LabelEncoder
+import binary_loader
+from pathlib import Path
+import os
+
+
+#importing our data
+home_dir = str(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+
+
+train_images_dir = home_dir + '/data/train/'
+train_image_pickle_file = home_dir + '/code/pickle/image_pickle_file.pickle'
+label_dir = home_dir + '/data/labels.csv'
+label_pickle_file = home_dir + '/code/pickle/labels.pickle'
+
+
+my_file = Path(train_image_pickle_file)
+
+
+if my_file.is_file():
+   image_data = binary_loader.read_pickle(train_image_pickle_file)
+
+else:
+    images_train = dataset.image_loader(train_images_dir)
+    image_data=  binary_loader.create_pickle(train_image_pickle_file, images_train)
+
+
+
+my_file = Path(label_pickle_file)
+
+if my_file.is_file():
+   label_data = binary_loader.read_pickle(label_pickle_file)
+
+else:
+    label_data = dataset.label_loader(label_dir)
+    label_data=  binary_loader.create_pickle(label_pickle_file,label_data)
+
+
+id_order = image_data['id_order']
+images = image_data['images']
+labels = label_data['labels']
+
+batch_size = 50
+num_features = 196608
+depth = 120
+
+
+
+images_list = np.array([np.squeeze(images[x]) for x in id_order[:50]]).T#clubbing all images in a list
+assert(images_list.shape == (num_features,batch_size))
+labels_list = np.array([[labels[x]] for x in id_order]).T#clubbing all labels in a list
+labels_cut = np.array([[labels[x]] for x in id_order[:50]]).T#clubbing all labels in a list
+assert(labels_cut.shape == (1,batch_size))
+
+
+
+
+graph = tf.Graph()
+
+with graph.as_default():
+
+   
+    #building the graph
+
+
+    encoder = LabelEncoder() #to be later used for one_hot_encoding.
+    encoder = encoder.fit(np.squeeze(labels_list))
+    labels_cut = encoder.transform(np.squeeze(labels_cut))
+    labels = tf.one_hot(labels_cut,depth= depth)
+
+    assert(labels.get_shape() == (batch_size,depth))
+
+    def activations(x,W,b):
+            return (tf.matmul(W,x)+b)
+
+    #intializing my input and output tensors
+    X = tf.placeholder(name='X',shape=(num_features,batch_size), dtype=tf.float32)
+    Y = tf.placeholder(name='Y',shape=(depth,batch_size),dtype=tf.float32)
+
+
+
+    n_h = 10           #(number of nodes in hidden layer)
+
+    #weights initalization
+    W1 = tf.get_variable(name='W1',shape=(n_h, num_features),initializer=tf.contrib.layers.xavier_initializer())
+    W2 = tf.get_variable(name='W2',shape=(depth,n_h),initializer=tf.contrib.layers.xavier_initializer())
+    weights = {'W1':W1, 'W2':W2}
+    b1 = tf.get_variable(name='b1',shape=[n_h,1],initializer=tf.zeros_initializer())
+    b2= tf.get_variable(name='b2',shape=[depth,1],initializer=tf.zeros_initializer()) 
+    #biases initalization
+    biases = {'b1':b1,'b2':b2}
+
+    #forward propagation
+    net = activations(X,weights['W1'],biases['b1'])
+    assert(net.get_shape() == (n_h,batch_size))
+    net = tf.nn.relu(net)
+    
+    net = activations(net,weights['W2'],biases['b2'])
+    
+    
+    assert(net.get_shape()==(depth,batch_size))
+    
+    #training our model
+ 
+    
+    
+    logits = tf.transpose(net)
+    assert(logits.get_shape() == (batch_size,depth))
+    assert(labels.get_shape() == (batch_size,depth))
+    #assert(net.get_shape == labels.shape)
+    cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits = logits , labels= tf.transpose(Y)))
+    #here labels and logits expect a shape of [batch_size,num_classes]
+
+    optimizer = tf.train.AdamOptimizer(learning_rate = 0.001).minimize(cost)
+    epochs = 100
+    init = tf.global_variables_initializer()
+    #running our computational graph
+    
+with tf.Session(graph=graph) as sess:
+    sess.run(init)
+    labels = sess.run(tf.transpose(labels))
+    feed_dict = {X:images_list,Y:labels}
+    for i in range(epochs):               
+        _,loss = sess.run([optimizer,cost],feed_dict=feed_dict)
+        if i%10 == 0:
+           print("loss at {0} epoch :{1}".format(i, loss))
