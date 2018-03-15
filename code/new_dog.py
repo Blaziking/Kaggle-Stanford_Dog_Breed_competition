@@ -20,18 +20,10 @@ home_dir = os.path.dirname(os.path.realpath('__file__'))
 
 def initialize_variables():
     with tf.variable_scope('model',reuse=tf.AUTO_REUSE):
-                
-        W1 = tf.get_variable(name='W1',shape=(n_h[0], num_features),initializer=tf.contrib.layers.xavier_initializer(),dtype=tf.float32)
-        W2 = tf.get_variable(name='W2',shape=(n_h[1], n_h[0]),initializer=tf.contrib.layers.xavier_initializer(),dtype=tf.float32)
-        W3 = tf.get_variable(name='W3',shape=(n_h[2], n_h[1]),initializer=tf.contrib.layers.xavier_initializer(),dtype=tf.float32)
-        
-        W4 = tf.get_variable(name='W4',shape=(depth,n_h[2]),initializer=tf.contrib.layers.xavier_initializer(),dtype=tf.float32)
-
-        b1 = tf.get_variable(name='b1',shape=[n_h[0],1],initializer=tf.zeros_initializer(),dtype=tf.float32)
-        b2 = tf.get_variable(name='b2',shape=[n_h[1],1],initializer=tf.zeros_initializer(),dtype=tf.float32)
-        b3 = tf.get_variable(name='b3',shape=[n_h[2],1],initializer=tf.zeros_initializer(),dtype=tf.float32)        
-        b4= tf.get_variable(name='b4',shape=[depth,1],initializer=tf.zeros_initializer(),dtype=tf.float32) 
-        parameters = {'b1':b1,'b2':b2,'b3':b3,'b4':b4,'W1':W1, 'W2':W2, 'W3':W3, 'W4':W4}
+        #W1 is filter for first cnn layer. shape is (height,width,in_channel,out_channel)
+        W1 = tf.get_variable('W1',shape=[4,4,3,8],initializer=tf.contrib.layers.xavier_initializer())
+        W2 = tf.get_variable('W2',shape=[6,6,8,16],initializer= tf.contrib.layers.xavier_initializer())
+        parameters = {'W1':W1, 'W2':W2}
     return parameters
 
 
@@ -44,14 +36,16 @@ def forward_prop(X,parameters):
       Returns:
       logits-- without calculating actiavation function on the last layer as the cost function doesn't need it. 
     '''
-        
-    Z1 = tf.matmul(parameters['W1'],X)+ parameters['b1']
+    W1 = parameters['W1']
+    W2 = parameters['W2']
+    Z1 = tf.nn.conv2d(X,W1,strides=[1,1,1,1],padding='VALID')
     A1 = tf.nn.relu(Z1)
-    Z2 = tf.matmul(parameters['W2'],A1)+ parameters['b2']
-    A2 = tf.nn.relu(Z2)
-    Z3 = tf.matmul(parameters['W3'],A2)+ parameters['b3']
-    A3 = tf.nn.relu(Z3)
-    logits = tf.matmul(parameters['W4'],A3)+parameters['b4']
+    P1 = tf.nn.max_pool(A1,ksize=[1,8,8,1],strides=[1,8,8,1],padding='VALID') 
+    # Z2 = tf.nn.conv2d(P1,W2, strides=[1,1,1,1],padding='VALID')
+    # A2 = tf.nn.relu(Z2)
+    # P2 = tf.nn.max_pool(A2,ksize=[1,8,8,1],strides=[1,8,8,1],padding='VALID') 
+    P2 = tf.contrib.layers.flatten(P1)
+    logits = tf.contrib.layers.fully_connected(P2,120,activation_fn=None)
     return logits
 
 
@@ -71,9 +65,9 @@ def model(training_dataset,validation_dataset,learning_rate=0.00002,epochs=10):
 #        validation_init_op = iterator.make_initializer(batched_validation_dataset)
         next_element = iterator.get_next()
         data = next_element     
-        X = tf.transpose(data[0])
-        Y = tf.transpose(data[1])
-        # assert(X.shape == (num_features,minibatch_size))
+        X = data[0]
+        Y = data[1]
+#        assert(X.get_shape == (minibatch_size))
         # assert(Y.shape == (depth,minibatch_size))
 
         parameters = initialize_variables()

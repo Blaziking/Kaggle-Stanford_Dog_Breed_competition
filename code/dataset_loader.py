@@ -14,16 +14,12 @@ def one_hot_encode(labels,depth=120):
     encoder = encoder.fit(np.squeeze(labels))
     labels = encoder.transform(np.squeeze(labels)) #labels converted into numbers
     labels = tf.one_hot(labels,depth= depth) #labels represented via one_hot representation
-
-  
     return labels
 
 def label_loader(path_labels):
     ''' 
     #use as labels[id] = image-label
     '''
-    
-
     #converting the labels.csv into a dictionary
     labels =[]
     files = []
@@ -36,7 +32,6 @@ def label_loader(path_labels):
             labels.append(row[1])
     
     return labels,files
-
 
 
 
@@ -67,10 +62,6 @@ def load_data(divider=9000):
 
     training_dataset = tf.data.Dataset.from_tensor_slices((training_dataset,training_labels))
     training_dataset = training_dataset.map(parse_function)
-
-
-
-    
     validation_dataset = tf.constant(files[divider:])
     validation_labels = labels[divider:]
     assert(validation_dataset.get_shape() == validation_labels.get_shape()[0])
@@ -89,12 +80,12 @@ def load_data(divider=9000):
 #run the following code to test it
 
 
-y = load_data()
-training_dataset = y['training_dataset']
-iterator = training_dataset.make_one_shot_iterator()
-with tf.Session() as sess:
-     next_element = iterator.get_next()
-     print((sess.run(next_element)))
-     print(np.array((sess.run(next_element)))[0].shape)
-     print((sess.run(next_element))[0].dtype)
-     print(training_dataset.get_shape())
+# y = load_data()
+# training_dataset = y['training_dataset']
+# iterator = training_dataset.make_one_shot_iterator()
+# with tf.Session() as sess:
+#      next_element = iterator.get_next()
+#      print((sess.run(next_element)))
+#      print(np.array((sess.run(next_element)))[0].shape)
+#      print((sess.run(next_element))[0].dtype)
+
