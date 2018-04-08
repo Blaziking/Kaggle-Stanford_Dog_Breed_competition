@@ -1,0 +1,10 @@
+import model
+import sys
+
+l = [1,2,3,4,5]
+
+if __name__ == 'main':
+    
+    for i in l:
+        sys.argv = ['--x'] + i
+        model.twice

@@ -1,6 +1,8 @@
+import shutil
 import tensorflow as tf
 import numpy as np
 import os.path
+import os
 from sklearn.preprocessing import LabelEncoder
 import csv
 
@@ -33,7 +35,16 @@ def label_loader(path_labels):
     
     return labels,files
 
+def rearrange_data(rearrange_dir):
+    labels,files = label_loader(labels_dir)
+    new_dirs = [rearrange_dir + label +'/' for label in labels]
+    old_files_dir = [train_dir + image+'/' for image in files]
+    new_files_dir = [destination_directory + image+'/' for destination_directory,image in zip(new_dirs,files)]
+    map(lambda path:os.makedirs(path,exist_ok = True),new_files_dir)
+    map(lambda src,dest:shutil.copyfile(src,dest),old_files_dir,new_files_dir)
 
+rearrange_data(home_dir + 'data/rearranged_data/')
+print('works')    
 
 def load_data(divider=9000):
     '''Arguments:
